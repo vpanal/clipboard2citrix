@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"syscall"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -46,10 +47,30 @@ func main() {
 	}
 }
 
+func isCapsLockOn() bool {
+	user32 := syscall.NewLazyDLL("user32.dll")
+	getKeyState := user32.NewProc("GetKeyState")
+
+	// VK_CAPITAL = 0x14 (código de Caps Lock en Windows)
+	state, _, _ := getKeyState.Call(uintptr(0x14))
+	return state&1 == 1
+}
+
 // escribirCaracter envía un carácter al teclado virtual
 func escribirCaracter(kb keybd_event.KeyBonding, char rune) error {
 	kb.Clear()
 	key, shiftRequired, altGRRequired, spaceRequired, accentoRequired, caretRequired, dieresisRequired, mayuscula := convertirCaracter(char)
+
+	initialCapsState := isCapsLockOn()
+
+	// Si Caps Lock está apagado, lo activamos
+	if initialCapsState {
+		fmt.Println("Caps Lock está encendido. Apagando...")
+		kb.SetKeys(keybd_event.VK_CAPSLOCK)
+		kb.Press()
+		time.Sleep(10 * time.Millisecond)
+		kb.Release()
+	}
 
 	if accentoRequired != 0 {
 		var accento int
