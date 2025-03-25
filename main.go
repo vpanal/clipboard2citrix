@@ -81,6 +81,8 @@ func main() {
 func getAltCode(c rune) string {
 	if int(c) == 10 {
 		return "0010"
+	} else if int(c) == 9 {
+		return "0009"
 	} else if unicode.IsPrint(c) {
 		return fmt.Sprintf("%04d", int(c))
 	}
@@ -91,6 +93,7 @@ func getAltCode(c rune) string {
 func typeCharacter(kb KeyBonding, char rune) error {
 	altCode := getAltCode(char)
 	if debugging {
+		fmt.Println("Código ASCII:", int(char))
 		fmt.Println("UNICODE Code:", altCode)
 	}
 
