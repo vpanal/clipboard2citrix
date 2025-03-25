@@ -11,7 +11,8 @@ import (
 
 const (
 	debugging = false
-	
+	version  = "1.1.2"
+
 	// Virtual-Key Codes
 	VK_ALT             = 0x12 + 0xFFF
 	KEYEVENTF_KEYUP    = 0x0002
