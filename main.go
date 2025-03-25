@@ -11,6 +11,7 @@ import (
 )
 
 const debugging = false
+const version = "1.1.2 lib-altcode"
 
 func main() {
 	// Obtener texto del portapapeles
