@@ -7,9 +7,9 @@ This project reads text from the clipboard and simulates typing it into a Citrix
 This repository has three main branches:
 
 - **`main`**: Does not use external libraries, relies on syscalls, works only on Windows, and types characters using `Alt + number` key combinations.
-- **`lib-altcode`**: Types characters using `Alt + number` key combinations.
 - **`es-shift`**: Uses `Shift + letter` for uppercase letters (only works with Spanish keyboards).
 - **`es-caps`**: Uses `Caps Lock` for uppercase letters (only works with Spanish keyboards).
+- **`lib-altcode`**: Types characters using `Alt + number` key combinations.
 
 ## Prerequisites
 
