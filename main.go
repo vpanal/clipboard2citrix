@@ -8,6 +8,8 @@ import (
 	"github.com/micmonay/keybd_event"
 )
 
+const version  = "1.1.2 es-caps"
+
 func main() {
 	// Obtener texto del portapapeles
 	texto, err := clipboard.ReadAll()

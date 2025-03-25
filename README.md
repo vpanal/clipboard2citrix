@@ -1,6 +1,14 @@
-# Clipboard to Citrix
+# Clipboard to Citrix - Version es-caps
 
 This project reads text from the clipboard and simulates typing it into a Citrix session using keyboard events.
+
+## Branches
+
+This repository has three main branches:
+
+- **`main`**: Does not use external libraries, relies on syscalls, works only on Windows, and types characters using `Alt + number` key combinations.
+- **`es-shift`**: Uses `Shift + letter` for uppercase letters (only works with Spanish keyboards).
+- **`es-caps`**: Uses `Caps Lock` for uppercase letters (only works with Spanish keyboards).
 
 ## Prerequisites
 
@@ -51,7 +59,7 @@ This project reads text from the clipboard and simulates typing it into a Citrix
 ## Dependencies
 
 - `github.com/atotto/clipboard`: For reading from the clipboard.
-- `github.com/micmonay/keybd_event`: For simulating keyboard events.
+- `github.com/vpanal/keybd_event`: For simulating keyboard events.
 
 ## License
 
@@ -60,3 +68,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
+
