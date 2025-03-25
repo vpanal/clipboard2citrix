@@ -3,17 +3,60 @@ package main
 import (
 	"fmt"
 	"unicode"
-	//"strconv"
+	"runtime"
 	"time"
 	"syscall"
-	"github.com/atotto/clipboard"
+	"unsafe"
 )
 
-const debugging = false
+const (
+	debugging = false
+	// Virtual-Key Codes
+	_VK_ALT             = 0x12 + 0xFFF
+	_KEYEVENTF_KEYUP    = 0x0002
+	_KEYEVENTF_SCANCODE = 0x0008
+	VK_TAB     = 15
+	VK_KP0     = 82
+	VK_KP1     = 79
+	VK_KP2     = 80
+	VK_KP3     = 81
+	VK_KP4     = 75
+	VK_KP5     = 76
+	VK_KP6     = 77
+	VK_KP7     = 71
+	VK_KP8     = 72
+	VK_KP9     = 73
+	// Clipboard formats
+	cfUnicodetext = 13
+)
+
+var (
+	user32                     = syscall.MustLoadDLL("user32")
+	isClipboardFormatAvailable = user32.MustFindProc("IsClipboardFormatAvailable")
+	openClipboard              = user32.MustFindProc("OpenClipboard")
+	closeClipboard             = user32.MustFindProc("CloseClipboard")
+	getClipboardData           = user32.MustFindProc("GetClipboardData")
+	procKeyBd                  = user32.MustFindProc("keybd_event")
+
+	kernel32     = syscall.MustLoadDLL("kernel32")
+	globalLock   = kernel32.MustFindProc("GlobalLock")
+	globalUnlock = kernel32.MustFindProc("GlobalUnlock")
+)
+
+type KeyBonding struct {
+	hasCTRL   bool
+	hasALT    bool
+	hasSHIFT  bool
+	hasRCTRL  bool
+	hasRSHIFT bool
+	hasALTGR  bool
+	hasSuper  bool
+	keys      []int
+}
 
 func main() {
 	// Obtener texto del portapapeles
-	texto, err := clipboard.ReadAll()
+	texto, err := ReadAll()
 	if err != nil {
 		if debugging {
 			fmt.Println("Error al leer el portapapeles:", err)
@@ -136,11 +179,8 @@ func getVKFromDigit(digit rune) int {
 	return -1
 }
 
+// KeyBonding functions
 
-var dll = syscall.NewLazyDLL("user32.dll")
-var procKeyBd = dll.NewProc("keybd_event")
-
-// Press key(s)
 func (k *KeyBonding) Press() error {
 	if k.hasALT {
 		downKey(_VK_ALT)
@@ -152,7 +192,6 @@ func (k *KeyBonding) Press() error {
 	return nil
 }
 
-//Release key(s)
 func (k *KeyBonding) Release() error {
 	if k.hasALT {
 		upKey(_VK_ALT)
@@ -163,7 +202,6 @@ func (k *KeyBonding) Release() error {
 	return nil
 }
 
-// Launch key bounding
 func (k *KeyBonding) Launching() error {
 	err := k.Press()
 	if err != nil {
@@ -194,19 +232,6 @@ func upKey(key int) {
 }
 func initKeyBD() error { return nil }
 
-//KeyBonding type for keybd_event
-type KeyBonding struct {
-	hasCTRL   bool
-	hasALT    bool
-	hasSHIFT  bool
-	hasRCTRL  bool
-	hasRSHIFT bool
-	hasALTGR  bool
-	hasSuper  bool
-	keys      []int
-}
-
-//NewKeyBonding Use for create struct KeyBounding
 func NewKeyBonding() (KeyBonding, error) {
 	keyBounding := KeyBonding{}
 	keyBounding.Clear()
@@ -217,7 +242,6 @@ func NewKeyBonding() (KeyBonding, error) {
 	return keyBounding, nil
 }
 
-//Clear clean instance
 func (k *KeyBonding) Clear() {
 	k.hasALT = false
 	k.hasCTRL = false
@@ -229,35 +253,72 @@ func (k *KeyBonding) Clear() {
 	k.keys = []int{}
 }
 
-//SetKeys set keys
 func (k *KeyBonding) SetKeys(keys ...int) {
 	k.keys = keys
 }
 
-//AddKey add one key pressed
 func (k *KeyBonding) AddKey(key int) {
 	k.keys = append(k.keys, key)
 }
 
-//HasALT If key ALT pressed
 func (k *KeyBonding) HasALT(b bool) {
 	k.hasALT = b
 }
 
-const (
-	_VK_ALT             = 0x12 + 0xFFF
-	_KEYEVENTF_KEYUP    = 0x0002
-	_KEYEVENTF_SCANCODE = 0x0008
-	VK_TAB     = 15
-	VK_KP0     = 82
-	VK_KP1     = 79
-	VK_KP2     = 80
-	VK_KP3     = 81
-	VK_KP4     = 75
-	VK_KP5     = 76
-	VK_KP6     = 77
-	VK_KP7     = 71
-	VK_KP8     = 72
-	VK_KP9     = 73
-)
 
+
+// Clipboard functions
+func ReadAll() (string, error) {
+	// LockOSThread ensure that the whole method will keep executing on the same thread from begin to end (it actually locks the goroutine thread attribution).
+	// Otherwise if the goroutine switch thread during execution (which is a common practice), the OpenClipboard and CloseClipboard will happen on two different threads, and it will result in a clipboard deadlock.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if formatAvailable, _, err := isClipboardFormatAvailable.Call(cfUnicodetext); formatAvailable == 0 {
+		return "", err
+	}
+	err := waitOpenClipboard()
+	if err != nil {
+		return "", err
+	}
+
+	h, _, err := getClipboardData.Call(cfUnicodetext)
+	if h == 0 {
+		_, _, _ = closeClipboard.Call()
+		return "", err
+	}
+
+	l, _, err := globalLock.Call(h)
+	if l == 0 {
+		_, _, _ = closeClipboard.Call()
+		return "", err
+	}
+
+	text := syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(l))[:])
+
+	r, _, err := globalUnlock.Call(h)
+	if r == 0 {
+		_, _, _ = closeClipboard.Call()
+		return "", err
+	}
+
+	closed, _, err := closeClipboard.Call()
+	if closed == 0 {
+		return "", err
+	}
+	return text, nil
+}
+
+func waitOpenClipboard() error {
+	started := time.Now()
+	limit := started.Add(time.Second)
+	var r uintptr
+	var err error
+	for time.Now().Before(limit) {
+		r, _, err = openClipboard.Call(0)
+		if r != 0 {
+			return nil
+		}
+		time.Sleep(time.Millisecond)
+	}
+	return err
+}
