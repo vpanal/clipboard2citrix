@@ -51,7 +51,7 @@ This project reads text from the clipboard and simulates typing it into a Citrix
 ## Dependencies
 
 - `github.com/atotto/clipboard`: For reading from the clipboard.
-- `github.com/micmonay/keybd_event`: For simulating keyboard events.
+- `github.com/vpanal/keybd_event`: For simulating keyboard events.
 
 ## License
 
