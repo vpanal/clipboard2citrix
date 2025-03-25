@@ -59,11 +59,12 @@ func main() {
 }
 
 func getAltCode(c rune) string {
-	if unicode.IsPrint(c) {
-		// Convertir a string con ceros a la izquierda (para que siempre tenga 4 dígitos)
+	if int(c) == 10 {
+		return "0010"
+	} else if unicode.IsPrint(c) {
 		return fmt.Sprintf("%04d", int(c))
 	}
-	return "Carácter no imprimible"
+	return "0000" // Non-printable characters are ignored
 }
 
 // escribirCaracter envía un carácter al teclado virtual
