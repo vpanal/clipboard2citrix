@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	debugging = true
+	debugging = false
 	
 	// Virtual-Key Codes
 	VK_ALT             = 0x12 + 0xFFF
